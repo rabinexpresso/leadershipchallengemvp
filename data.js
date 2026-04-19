@@ -417,7 +417,7 @@ const DIM_INSIGHTS = {
 const COMPANION_QUESTION = "Is this what you would actually do \u2014 or what you know you should do?";
 
 // ── STATE ─────────────────────────────────────────────────────
-let S = {
+var S = {
   players: [],
   step: 0,
   scenarioOrder: [],

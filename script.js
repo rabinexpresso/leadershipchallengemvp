@@ -550,66 +550,7 @@ function scoreboardNext() {
 //  FINAL RESULTS
 // ═══════════════════════════════════════════════════════
 
-// For each dimension, which scenarios matter most (by scenario index)
-const DIM_KEY_SCENARIOS = {
-  trust:        [0, 3],   // The Pivot (max 3pts), The Change (max 3pts)
-  proactivity:  [1, 4],   // The Quiet One (max 3pts), Monday Morning (max 2pts)
-  delegation:   [2, 4],   // The Handover (max 3pts), Monday Morning (max 3pts)
-  adaptability: [3, 0],   // The Change (max 2pts), The Pivot (max 2pts)
-};
 
-// Personalised insight text per [dimension][scenarioIdx][choiceIdx]
-// insight = what happened + why it matters. action = concrete next step.
-const DIM_INSIGHTS = {
-  trust: {
-    0: [
-      { insight: "You called the team together immediately — before you had all the answers. That instinct is exactly what builds lasting trust. People don't need you to have it figured out; they need to know you won't disappear when things get uncertain.", action: "Keep this as a reflex: when news breaks, be the first voice in the room. Even 'I don't have the full picture yet, but let's talk' is worth more than silence." },
-      { insight: "You took a day to process the change before speaking up. Reasonable — but your team had already heard rumours by then, and the silence in between cost you trust faster than you'd expect.", action: "Try: send a short message within an hour of news breaking — 'I've seen this, I'm working on it, let's regroup at 3pm.' The gap between announcement and acknowledgement is where trust erodes." },
-      { insight: "Going upstream for more context was smart information management — but your team found out through the rumour mill before they heard from you. Good instinct, slow execution.", action: "Before you go to management, take 60 seconds to tell your team: 'I'm getting more clarity on this for you — I'll be back by end of day.' They need to feel included in the wait, not excluded from it." }
-    ],
-    3: [
-      { insight: "Keeping your doubts private to present a united front — your team sensed the gap between what you said and how you said it anyway. Authenticity builds more trust than polish does.", action: "Try: 'I have some questions about this myself — here's what I do know, and here's how we're going to make it work.' That framing invites people in rather than closing them out." },
-      { insight: "You admitted uncertainty while committing to forward motion. That's vulnerability-based trust in action — and it produced more genuine buy-in than any polished united front could have.", action: "Keep doing this. Your team learned something from watching you hold complexity — not just from the words you used." },
-      { insight: "You championed the change professionally while managing your doubts quietly. Trust-preserving — but your team missed a chance to see how you navigate real uncertainty, which is where the deepest trust is built.", action: "Next time: even a small 'I'm still working through some of this myself' opens a door that a polished front keeps closed." }
-    ]
-  },
-  proactivity: {
-    1: [
-      { insight: "You caught the early signal — someone going quiet, tasks slipping — and acted before it became a formal issue. That one 1:1 was the intervention, and it worked before anyone else noticed anything was wrong.", action: "Build this as a standing habit: one unscheduled check-in per week with whoever seems most 'off'. The cost is 20 minutes. The upside is catching things while they're still small enough to fix with a conversation." },
-      { insight: "You waited for more certainty before acting. Three weeks later, someone else flagged it to your manager. The window to help at low cost — one honest conversation — had already closed.", action: "Try this rule: if something feels off about someone for more than 3 days, that's your signal to act. A simple 'Hey, got 10 minutes this week?' is enough. You don't need a prepared reason." },
-      { insight: "A general 'is everyone okay?' felt safer than a direct conversation with Jake. But he needed you to notice him specifically — not a group question he could quietly disappear into.", action: "Practice the specific check-in: 'Hey Jake, I've noticed you seem a bit quieter lately — want to grab a coffee this week?' Direct, low-pressure, and unmistakably personal. That's what proactivity looks like at the people level." }
-    ],
-    4: [
-      { insight: "The client escalation went to the top of the pile. The team member who had been waiting since Friday for an HR conversation kept waiting. That kind of delay gets remembered — even when the reason is completely understandable.", action: "When triaging, ask: 'Who needs ME specifically, vs what can someone else handle?' A client escalation is often the latter. An HR conversation with a team member almost never is." },
-      { insight: "You delegated the external issue and handled the human one first. Under Monday morning pile-on pressure, that's clear and correct priority thinking — people over process.", action: "Keep this triage reflex. The next level: pre-delegate before crises happen. 'You're my first call if anything escalates with this client' is delegation that doesn't wait for a Monday morning." },
-      { insight: "You managed upward proactively before missing a deadline, handled the person who needed you, then delegated the rest. That's what proactive leadership under pressure actually looks like.", action: "Codify this pattern for your team: communicate early when something has to shift, handle people first, delegate boldly. You modelled it — now name it explicitly so others can follow it." }
-    ]
-  },
-  delegation: {
-    2: [
-      { insight: "Two weeks building a thorough document — and when real problems hit, they came back to you anyway. Documents capture steps, not instinct. The dependency on you stayed intact. A handover in name only.", action: "Before writing anything, sit with the person for an hour and ask: 'What do you think this process is actually trying to achieve?' Their answer shows you exactly what the 'why' conversation needs to cover." },
-      { insight: "You transferred the reasoning, not just the steps. That's the difference between offloading a task and genuinely delegating. They owned it — and they made the process better, which only happens when people have real ownership.", action: "Push this further: once someone owns the 'why', step back even more. Ask them to teach it to the next person. Delegation that replicates itself is the real goal." },
-      { insight: "Stepping back completely gave them real ownership — and it stuck. Some of your 'don'ts' turned out to be context-specific and they learned to tell the difference themselves.", action: "Good instinct, slightly rough execution. Next time: be explicit upfront — 'I'm stepping back. Here's when to pull me in.' Ownership without any access creates unnecessary chaos early on." }
-    ],
-    4: [
-      { insight: "Everything stayed with you — the client issue, the update prep, all of it. When nothing gets delegated, you become the bottleneck by default, even when that's not what you're trying to do.", action: "Ask yourself each morning: 'What's on my plate today that someone else could handle — and would benefit from handling?' Start with just one thing. Delegation is a muscle built in small daily reps." },
-      { insight: "You delegated the client escalation under real Monday morning pressure — and someone grew visibly from the experience. That's the multiplier effect of good delegation: not just offloading, but actively developing people.", action: "Track who you delegate to under pressure. Those are your future leaders. Make sure they know you noticed." },
-      { insight: "Strategic delegation under a messy morning, plus communicating upward before the deadline hit. Both the right calls — and in the right order.", action: "The next level: pre-delegate before crises arrive. 'You're my first call if anything escalates with this client this week' is delegation that doesn't wait for a Monday morning to trigger it." }
-    ]
-  },
-  adaptability: {
-    3: [
-      { insight: "You implemented the change while keeping your doubts private. That's adaptation — just invisible adaptation. Your team had nothing to follow, because they couldn't see how you were navigating it.", action: "Try naming your process once: 'I'm not fully sold on all of this — here's how I'm thinking about it.' That gives your team a model for handling their own ambivalence, which is far more useful than a polished front." },
-      { insight: "You named the uncertainty and moved anyway. That's the highest-signal adaptability behaviour — it shows your team that complexity is survivable and that you'll lead through it, not around it.", action: "Keep doing this under change pressure. The natural pull is towards certainty-signalling. Resist it when honesty would serve your team better than confidence would." },
-      { insight: "You adapted effectively and kept the team moving while managing your doubts professionally. Clean change leadership — and you built credibility upward at the same time.", action: "The next level: occasionally let your team see more of your internal process. Not always — but when they're struggling with the same ambiguity, your visible navigation is their map." }
-    ],
-    0: [
-      { insight: "You walked into the team conversation before the picture was clear. That takes real courage under change pressure — and it's exactly what leading through uncertainty looks like rather than waiting for it to resolve.", action: "Keep the instinct to act before you have full clarity. The alternative — waiting until you do — often means your team waits with you, and uncertainty expands to fill the silence." },
-      { insight: "You processed privately before acting. Thoughtful — but it looked like stillness to a team watching for direction. The issue isn't that you needed time; it's that they couldn't see you in motion.", action: "Try: while you're processing, narrate it briefly. 'I'm still working through this — here's where I am so far' keeps your team moving even when you're not fully there yet." },
-      { insight: "You moved to get more information before saying anything. Good information instinct — but it looked like inaction to a team that was waiting to see how you'd respond to the change.", action: "Try moving before you're ready: 'I don't know yet — but here's what we're doing today while I figure it out.' Motion in uncertainty is itself a form of leadership." }
-    ]
-  }
-};
 
 function getDimInsight(player, dim, excludeScenarios) {
   excludeScenarios = excludeScenarios || [];
