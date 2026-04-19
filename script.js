@@ -57,7 +57,7 @@ function renderTutSlide() {
   }).join('');
   // Prev button
   const prev = document.getElementById('tut-prev');
-  prev.style.display = S.tutSlide === 0 ? 'none' : 'block';
+  prev.style.display = 'block'; // Always show - on slide 1 it goes back to splash
   // Next button
   const next = document.getElementById('tut-next');
   next.textContent = S.tutSlide === TOTAL_SLIDES - 1 ? 'Add Players →' : 'Next →';
@@ -65,10 +65,16 @@ function renderTutSlide() {
 
 function tutNav(dir) {
   if (dir === 1 && S.tutSlide === TOTAL_SLIDES - 1) {
+    // Last slide Next → go to add players
     S.fromTutorial = true;
     document.getElementById('ap-back-btn').setAttribute('onclick', "go('tutorial')");
     go('add-players');
     initPlayerRows();
+    return;
+  }
+  if (dir === -1 && S.tutSlide === 0) {
+    // First slide Back → go to splash
+    go('splash');
     return;
   }
   S.tutSlide = Math.max(0, Math.min(TOTAL_SLIDES - 1, S.tutSlide + dir));
@@ -139,6 +145,52 @@ function startGame() {
   go('mode-select');
 }
 
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getMaxForScenarios(indices) {
+  const m = { T:0, P:0, E:0, A:0 };
+  indices.forEach(idx => {
+    const scenario = SCENARIOS[idx];
+    DIMS.forEach(d => {
+      const best = Math.max(...scenario.choices.map(c => c.scores[d] || 0));
+      m[d] += best;
+    });
+  });
+  return m;
+}
+
+function buildScenarioOrder(count) {
+  // Signal coverage guarantee:
+  // T key scenarios: [0,3]   P key: [7,10]   E key: [2,4]   A key: [5,8]
+  // Best single per signal:  T=0, P=7, E=2, A=5
+  // Quick: [0,7,2,5,9] fixed  |  Full: [0,3,7,10,2,4,5,8] fixed  |  Deep: all 12 shuffled
+
+  if (count === 12) {
+    // Deep Dive: all 12 shuffled — full variety
+    return shuffle([0,1,2,3,4,5,6,7,8,9,10,11]);
+  }
+  if (count === 8) {
+    // Full Game: both key scenarios per signal (8 total), shuffled
+    // Every signal is covered twice — profile is reliable
+    return shuffle([0,3,7,10,2,4,5,8]);
+  }
+  if (count === 5) {
+    // Quick Round: fixed 5 scenarios [0,7,2,5,9] — shuffled order only
+    // Max scores perfectly balanced: T=9, P=9, E=9, A=9 every game
+    // Scenario 9 (The Rebuild) is the only non-key scenario covering all 4 signals
+    return shuffle([0, 7, 2, 5, 9]);
+  }
+  // Fallback
+  return shuffle([0,1,2,3,4,5,6,7,8,9,10,11]).slice(0, count);
+}
+
 function startGameWithCount(count) {
   const inputs = document.querySelectorAll('.p-input');
   S.players = [];
@@ -154,16 +206,11 @@ function startGameWithCount(count) {
     }
   });
   if (S.players.length === 0) return;
-  // Shuffle all 12 scenarios and pick first `count`
-  const order = Array.from({length:12}, (_,i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  S.scenarioOrder = order.slice(0, count);
+  S.scenarioOrder = buildScenarioOrder(count);
   S.step = 0;
   S.roundChoices = [];
   S.pickerIdx = 0;
+  S.MAX = getMaxForScenarios(S.scenarioOrder);
   renderPickTurn(0);
   go('game');
 }
@@ -201,16 +248,9 @@ function renderPickTurn(playerIdx) {
   pick.classList.remove('hidden');
   document.getElementById('game-locked').classList.remove('vis');
 
-  const badgeHtml = isSolo() ? '' : `
-    <div class="player-badge" style="color:${player.color};border-color:${player.color}40;background:${player.color}12;">
-      <div class="player-badge-dot" style="background:${player.color}"></div>
-      ${player.name}'s turn
-    </div>
-  `;
+
 
   pick.innerHTML = `
-    ${badgeHtml}
-    <div class="s-tag eyebrow">Scenario ${S.step+1} of ${SCENARIOS.length}</div>
     <h2 class="s-heading">${scenario.title}</h2>
     <div class="s-box">${scenario.situation}</div>
     <div class="choices-label">What would you do?</div>
@@ -224,7 +264,8 @@ function renderPickTurn(playerIdx) {
 }
 
 function pick(choiceIdx) {
-  const scenario = SCENARIOS[S.step];
+  const scIdx = S.scenarioOrder.length ? S.scenarioOrder[S.step] : S.step;
+  const scenario = SCENARIOS[scIdx];
   const choice = scenario.choices[choiceIdx];
   const player = S.players[S.pickerIdx];
 
@@ -235,8 +276,7 @@ function pick(choiceIdx) {
 
   // Record choice + apply scores
   S.roundChoices.push({ playerIdx: S.pickerIdx, choiceIdx });
-  const _scIdx = S.scenarioOrder.length ? S.scenarioOrder[S.step] : S.step;
-  player.choices[_scIdx] = choiceIdx;
+  player.choices[scIdx] = choiceIdx;
   DIMS.forEach(d => {
     player.scores[d] = (player.scores[d] || 0) + (choice.scores[d] || 0);
   });
@@ -253,7 +293,8 @@ function pick(choiceIdx) {
 }
 
 function showLocked(choiceIdx) {
-  const scenario = SCENARIOS[S.step];
+  const scIdx = S.scenarioOrder.length ? S.scenarioOrder[S.step] : S.step;
+  const scenario = SCENARIOS[scIdx];
   const choice = scenario.choices[choiceIdx];
   const player = S.players[S.pickerIdx];
   const nextIdx = S.pickerIdx + 1;
@@ -299,7 +340,8 @@ function lockedNext() {
 // ═══════════════════════════════════════════════════════
 
 function buildRevealScreen() {
-  const scenario = SCENARIOS[S.step];
+  const scIdx = S.scenarioOrder.length ? S.scenarioOrder[S.step] : S.step;
+  const scenario = SCENARIOS[scIdx];
   document.getElementById('rv-topbar-title').textContent = `Scenario ${S.step+1}: ${scenario.title}`;
   document.getElementById('rv-sub').textContent = `Here's what everyone chose for "${scenario.title}"`;
 
@@ -406,11 +448,12 @@ function showConsequence() {
 }
 
 function buildConsequenceScreen() {
-  const scenario = SCENARIOS[S.step];
+  const scIdx = S.scenarioOrder.length ? S.scenarioOrder[S.step] : S.step;
+  const scenario = SCENARIOS[scIdx];
   document.getElementById('cq-topbar-title').textContent = `${scenario.title} — Outcome`;
 
   const body = document.getElementById('cq-body');
-  const ICONS = { trust:'🛡️', proactivity:'👁️', delegation:'🎯', adaptability:'🔄' };
+  const ICONS = DIM_ICONS;
 
   // Group by choice
   const choiceGroups = {};
@@ -429,6 +472,8 @@ function buildConsequenceScreen() {
   let html = `
     <div class="cq-tag eyebrow">What happened</div>
     <h2 class="cq-heading">${scenario.title}</h2>
+    <div class="cq-situation">${scenario.situation}</div>
+    <div class="cq-scoring-note">💡 Different choices exercise different signals — a zero on one signal does not mean the choice was wrong. Each option reflects a genuine leadership approach; the signals show <em>which</em> leadership quality it demonstrates most.</div>
   `;
 
   choiceKeys.forEach((key, i) => {
@@ -492,15 +537,15 @@ function buildScoreboard() {
   document.getElementById('sb-cta').textContent = isLast ? 'See Final Results →' : `Next Scenario →`;
 
   // Sort players by average
-  const sorted = [...S.players].sort((a,b) => avg4(b.scores, MAX) - avg4(a.scores, MAX));
+  const sorted = [...S.players].sort((a,b) => avg4(b.scores, S.MAX) - avg4(a.scores, S.MAX));
   const medals = ['🥇','🥈','🥉'];
   const ranks = sorted.map((_, i) => i < 3 ? medals[i] : String(i + 1));
 
   const cards = document.getElementById('sb-cards');
   cards.innerHTML = sorted.map((player, rank) => {
-    const totalAvg = Math.round(avg4(player.scores, MAX));
+    const totalAvg = Math.round(avg4(player.scores, S.MAX));
     const bars = DIMS.map(d => {
-      const p = pct(player.scores[d], MAX[d]);
+      const p = pct(player.scores[d], S.MAX[d]);
       return `
         <div class="sb-br">
           <div class="sb-bl">
@@ -533,7 +578,8 @@ function buildScoreboard() {
 }
 
 function scoreboardNext() {
-  const isLast = S.step >= SCENARIOS.length - 1;
+  const _total = S.scenarioOrder.length || SCENARIOS.length;
+  const isLast = S.step >= _total - 1;
   if (isLast) {
     buildFinal();
     go('final');
@@ -596,9 +642,11 @@ function getProfile(s, mx) {
   mx = mx || MAX;
   // Run profiles in cascade order - first match wins
   const cascadeOrder = [
-    "visionary","rising","firefighter",
+    "visionary",
     "cornerstone","catalyst","enabler","driver","pathfinder","architect",
     "protector","lookout","builder","compass",
+    "rising",
+    "firefighter",
     "steady-T","steady-P","steady-E","steady-A"
   ];
   for (const id of cascadeOrder) {
@@ -608,21 +656,32 @@ function getProfile(s, mx) {
   return PROFILES.find(p => p.id === "steady-T");
 }
 
+function profileDisplayName(profile) {
+  // For Steady Hand variants, show the leaning signal
+  const leaningMap = {
+    'steady-T': 'The Steady Hand — Trust',
+    'steady-P': 'The Steady Hand — Proactivity',
+    'steady-E': 'The Steady Hand — Empowerment',
+    'steady-A': 'The Steady Hand — Adaptability'
+  };
+  return leaningMap[profile.id] || profile.name;
+}
+
 function buildFinal() {
   document.getElementById('final-sub').textContent =
     S.players.length === 1
       ? "Here's what your choices revealed about your leadership."
       : 'Here is what ' + S.players.length + ' different sets of choices revealed.';
 
-  const sorted = [...S.players].sort((a,b) => avg4(b.scores, MAX) - avg4(a.scores, MAX));
+  const sorted = [...S.players].sort((a,b) => avg4(b.scores, S.MAX) - avg4(a.scores, S.MAX));
 
   const cards = document.getElementById('final-cards');
   cards.innerHTML = sorted.map(player => {
-    const profile = getProfile(player.scores);
-    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],MAX[a]) - pct(player.scores[b],MAX[b])).slice(0,3);
+    const profile = getProfile(player.scores, S.MAX);
+    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],S.MAX[a]) - pct(player.scores[b],S.MAX[b])).slice(0,3);
 
     const bars = DIMS.map(d => {
-      const p = pct(player.scores[d], MAX[d]);
+      const p = pct(player.scores[d], S.MAX[d]);
       return '<div class="pr-br">'
         + '<div class="pr-bl"><span class="pr-bl-name">' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + '</span><span class="pr-bl-pct">' + p + '%</span></div>'
         + '<div class="pr-track"><div class="pr-fill" data-pct="' + p + '"></div></div>'
@@ -634,7 +693,7 @@ function buildFinal() {
       const ins = getDimInsight(player, d, usedScenarios);
       usedScenarios.push(ins.scenarioIdx);
       return '<div class="pr-insight">'
-        + '<div class="pr-insight-dim">' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' &nbsp;<span class="pr-insight-pct">' + pct(player.scores[d], MAX[d]) + '%</span></div>'
+        + '<div class="pr-insight-dim">' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' &nbsp;<span class="pr-insight-pct">' + pct(player.scores[d], S.MAX[d]) + '%</span></div>'
         + '<div class="pr-insight-from">From &ldquo;' + ins.scenarioTitle + '&rdquo; &mdash; Choice ' + ins.choiceLetter + '</div>'
         + '<p class="pr-insight-text">' + ins.insight + '</p>'
         + '<div class="pr-insight-action"><span class="pr-insight-action-label">Try this</span>' + ins.action + '</div>'
@@ -648,7 +707,7 @@ function buildFinal() {
       + '<div class="pr-name" style="color:' + player.color + '">' + player.name + '</div>'
       + '<div class="pr-emoji">' + profile.emoji + '</div>'
       + '</div>'
-      + '<div class="pr-profile">' + profile.name + '</div>'
+      + '<div class="pr-profile">' + profileDisplayName(profile) + '</div>'
       + '<p class="pr-desc">' + profile.desc + '</p>'
       + '<div class="pr-bars">' + bars + '</div>'
       + '<button class="pr-insights-toggle" onclick="toggleInsights(\'' + cardId + '\')">'
@@ -684,26 +743,26 @@ function toggleInsights(cardId) {
 // ── SHARE ──────────────────────────────────────────────
 
 function buildShareText() {
-  const sorted = [...S.players].sort((a,b) => avg4(b.scores, MAX) - avg4(a.scores, MAX));
+  const sorted = [...S.players].sort((a,b) => avg4(b.scores, S.MAX) - avg4(a.scores, S.MAX));
   let text = '🏆 Leadership Challenge Results\nHLE / Alaya · 2026\n';
   text += '━━━━━━━━━━━━━━━━━━━━━━\n\n';
   sorted.forEach((player, i) => {
-    const profile = getProfile(player.scores);
+    const profile = getProfile(player.scores, S.MAX);
     const medals = ['🥇','🥈','🥉'];
     const rank = i < 3 ? medals[i] : (i + 1) + '.';
-    text += rank + ' ' + player.name.toUpperCase() + ' — ' + profile.name + ' ' + profile.emoji + '\n';
-    text += '🛡️ Trust: ' + pct(player.scores.T, MAX.T) + '%  ';
-    text += '👁️ Proactivity: ' + pct(player.scores.P, MAX.P) + '%  ';
-    text += '🎯 Delegation: ' + pct(player.scores.E, MAX.E) + '%  ';
-    text += '🔄 Adaptability: ' + pct(player.scores.A, MAX.A) + '%\n';
+    text += rank + ' ' + player.name.toUpperCase() + ' — ' + profileDisplayName(profile) + ' ' + profile.emoji + '\n';
+    text += '🛡️ Trust: ' + pct(player.scores.T, S.MAX.T) + '%  ';
+    text += '👁️ Proactivity: ' + pct(player.scores.P, S.MAX.P) + '%  ';
+    text += '🎯 Delegation: ' + pct(player.scores.E, S.MAX.E) + '%  ';
+    text += '🔄 Adaptability: ' + pct(player.scores.A, S.MAX.A) + '%\n';
     text += '\n' + profile.desc + '\n';
     text += '\n📈 Growth Insights:\n';
-    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],MAX[a]) - pct(player.scores[b],MAX[b])).slice(0,3);
+    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],S.MAX[a]) - pct(player.scores[b],S.MAX[b])).slice(0,3);
     const usedSc = [];
     lowestDims.forEach(d => {
       const ins = getDimInsight(player, d, usedSc);
       usedSc.push(ins.scenarioIdx);
-      text += '\n' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' (' + pct(player.scores[d], MAX[d]) + '%)';
+      text += '\n' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' (' + pct(player.scores[d], S.MAX[d]) + '%)';
       text += ' — From "' + ins.scenarioTitle + '", Choice ' + ins.choiceLetter + '\n';
       text += ins.insight + '\n';
       text += '▶ Try this: ' + ins.action + '\n';
@@ -761,7 +820,7 @@ function copyShareText() {
 }
 
 function downloadWord() {
-  const sorted = [...S.players].sort((a,b) => avg4(b.scores, MAX) - avg4(a.scores, MAX));
+  const sorted = [...S.players].sort((a,b) => avg4(b.scores, S.MAX) - avg4(a.scores, S.MAX));
   const medals = ['🥇','🥈','🥉'];
   let html = '<html><head><meta charset="UTF-8">'
     + '<style>body{font-family:Calibri,sans-serif;color:#111;max-width:700px;margin:40px auto;padding:0 24px}'
@@ -784,15 +843,15 @@ function downloadWord() {
     + '<p style="color:#888;font-size:13px">HLE / Alaya &middot; 2026</p><hr class="divider">';
 
   sorted.forEach((player, i) => {
-    const profile = getProfile(player.scores);
+    const profile = getProfile(player.scores, S.MAX);
     const rank = i < 3 ? medals[i] : (i + 1) + '.';
     const usedSc = [];
-    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],MAX[a]) - pct(player.scores[b],MAX[b]));
+    const lowestDims = [...DIMS].sort((a,b) => pct(player.scores[a],S.MAX[a]) - pct(player.scores[b],S.MAX[b]));
     html += '<h2>' + rank + ' ' + player.name + '</h2>';
-    html += '<p><span class="tag">' + profile.name + ' ' + profile.emoji + '</span></p>';
+    html += '<p><span class="tag">' + profileDisplayName(profile) + ' ' + profile.emoji + '</span></p>';
     html += '<p style="font-size:14px;color:#444;margin:8px 0 14px">' + profile.desc + '</p>';
     DIMS.forEach(d => {
-      const p = pct(player.scores[d], MAX[d]);
+      const p = pct(player.scores[d], S.MAX[d]);
       html += '<div class="bar-row">'
         + '<span class="bar-label">' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + '</span>'
         + '<div class="bar-track"><div class="bar-fill" style="width:' + p + '%"></div></div>'
@@ -803,7 +862,7 @@ function downloadWord() {
       const ins = getDimInsight(player, d, usedSc);
       usedSc.push(ins.scenarioIdx);
       html += '<div class="insight">'
-        + '<div class="insight-from">From &ldquo;' + ins.scenarioTitle + '&rdquo; &mdash; Choice ' + ins.choiceLetter + ' &mdash; ' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' ' + pct(player.scores[d],MAX[d]) + '%</div>'
+        + '<div class="insight-from">From &ldquo;' + ins.scenarioTitle + '&rdquo; &mdash; Choice ' + ins.choiceLetter + ' &mdash; ' + DIM_ICONS[d] + ' ' + DIM_LABELS[d] + ' ' + pct(player.scores[d],S.MAX[d]) + '%</div>'
         + '<p style="font-size:14px;margin:4px 0">' + ins.insight + '</p>'
         + '<div class="try-this"><span class="try-label">Try this</span>' + ins.action + '</div>'
         + '</div>';

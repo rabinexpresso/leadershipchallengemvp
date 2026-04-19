@@ -4,19 +4,19 @@
 // ============================================================
 
 // ── SIGNAL MAXES ─────────────────────────────────────────────
-const MAX = { T:21, P:23, E:19, A:21 };
+var MAX = { T:21, P:23, E:19, A:21 };
 
 // ── DIMENSIONS ───────────────────────────────────────────────
-const DIMS = ["T","P","E","A"];
-const DIM_ICONS  = { T:"\uD83D\uDEE1\uFE0F", P:"\uD83D\uDC41\uFE0F", E:"\uD83C\uDFAF", A:"\uD83D\uDD04" };
-const DIM_LABELS = { T:"Trust", P:"Proactivity", E:"Empowerment", A:"Adaptability" };
-const DIM_KEY_SCENARIOS = { T:[0,3], P:[7,10], E:[2,4], A:[5,8] };
+var DIMS = ["T","P","E","A"];
+var DIM_ICONS  = { T:"🛡️", P:"👁️", E:"🎯", A:"🔄" };
+var DIM_LABELS = { T:"Trust", P:"Proactivity", E:"Empowerment", A:"Adaptability" };
+var DIM_KEY_SCENARIOS = { T:[0,3], P:[7,10], E:[2,4], A:[5,8] };
 
 // ── COLOURS ──────────────────────────────────────────────────
-const COLORS = ["#f5a623","#60a5fa","#10b981","#f472b6","#a78bfa","#fb923c","#34d399","#e879f9"];
+var COLORS = ["#f5a623","#60a5fa","#10b981","#f472b6","#a78bfa","#fb923c","#34d399","#e879f9"];
 
 // ── SCENARIOS ────────────────────────────────────────────────
-const SCENARIOS = [
+var SCENARIOS = [
   {
     title: "The Pivot",
     situation: "Management just announced a major new priority mid-week. Your team has been fully heads-down on a project for three weeks. The message came via Slack \u2014 minimal context, just \u201cwe\u2019re shifting gears.\u201d",
@@ -248,7 +248,7 @@ function _isSteadyHand(s, mx) {
 }
 
 // ── PROFILES ─────────────────────────────────────────────────
-const PROFILES = [
+var PROFILES = [
   { id:"visionary", name:"The Visionary", emoji:"\uD83C\uDF1F",
     desc:"You have built something genuinely rare. Your team trusts you enough to tell you the hard things. You notice problems before they escalate. You develop people rather than depending on them. When conditions shift, you lead through the change rather than managing around it. The risk at this level: leaders who are strong everywhere sometimes stop growing anywhere.",
     actions:{ T:"Your team feels safe with you. The next level is using that safety to have the conversations that are genuinely difficult. Once a month, initiate a conversation with a team member about something you have been avoiding.", P:"In your next team meeting, name something you are watching \u2014 not a problem yet, just a signal \u2014 and ask your team what they see. You are teaching the habit by modelling it out loud.", E:"You develop people well. The next level is developing people who develop people. Identify one team member ready to start coaching others. Give them a specific person to develop and a specific outcome to aim for.", A:"When change lands, narrate your first 24 hours: here is what I know, here is what I do not know, and here is what I am doing about it." },
@@ -338,7 +338,7 @@ const PROFILES = [
 // ── GROWTH INSIGHTS ───────────────────────────────────────────
 // Named DIM_INSIGHTS to match existing script.js
 // Format: DIM_INSIGHTS[dimension][scenario_index][choice_index]
-const DIM_INSIGHTS = {
+var DIM_INSIGHTS = {
   T: {
     0: [
       { insight:"Even though you called your team together immediately, Trust is still showing as a growth area. The instinct to show up in uncertainty is there \u2014 but it may not yet be consistent across all the situations that require it. Trust is built through a pattern, not a single moment.",
@@ -414,7 +414,7 @@ const DIM_INSIGHTS = {
 };
 
 // ── DISCUSS COMPANION QUESTION ────────────────────────────────
-const COMPANION_QUESTION = "Is this what you would actually do \u2014 or what you know you should do?";
+var COMPANION_QUESTION = "Is this what you would actually do \u2014 or what you know you should do?";
 
 // ── STATE ─────────────────────────────────────────────────────
 var S = {
